@@ -1,119 +1,100 @@
-import Data.List
-import System.Directory
-import System.IO.Error
-import Control.Exception
+import Data.Char
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import System.Random
 
-main = do
-    contents <- readFile "input/hightemp.txt"
-    q19 contents
+main = q09 >>= putStrLn
 
--- cut -f1 | LC_ALL=C sort | uniq -c
-f19 :: String -> String
-f19 = unlines
-    . map (\(s, l) -> (++ ('\t':s)) . show . negate $ l)
-    . sort
-    . map (\s -> (head s, negate . length $ s))
-    . group . sort . lines . head . columns
+f09 :: String -> IO String
+f09 str = do
+    gen <- newStdGen
+    return $ foldr1 catWithSpace $ fst . foldr midShuf ([], gen) $ words str
 
--- sort -nrk 3 hightemp.txt
-f18 :: String -> String
-f18 = unlines . map snd . sort
-    . map (\(w,s) -> (negate . read . (!!2) $ w :: Float, s))
-    . filter ((3<=) . length . fst)
-    . map (\s -> (words s, s))
-    . lines
+catWithSpace :: String -> String -> String
+catWithSpace str1 str2 = str1 ++ ' ':str2
 
--- cut -f1 | LC_ALL=C sort -u
-f17 :: String -> String
-f17 = unlines . sort . nub . lines . head . columns
+midShuf :: RandomGen t => [a] -> ([[a]], t) -> ([[a]], t)
+midShuf [] (buf, rand) = (buf, rand)
+midShuf element@(c:s) (buf, rand)
+    | (4>=) . length $ element = (element:buf, rand)
+    | otherwise = (element':buf, rand')
+        where middle = init s
+              (middle', rand') = shuffle middle rand
+              element' = c:middle' ++ [last s]
 
--- | split -l に対する実装。
--- | 問題文は split -n l/ を想定している可能性がある。
--- | 行数の分割ポリシーは把握できたが、それを書くともう少し長くなるため今回はここまで。
-f16 :: Int -> String -> [(String, String)]
-f16 n str = let
-    iSplit = f16' 1 $ lines str
-    digits = log10N $ length $ iSplit
-    paddingZero = replicate (digits-1) '0'
-    zeroPadding = tailN digits . (paddingZero++) . show
-    in map (\(ind, block) -> (zeroPadding ind, unlines block)) iSplit where
-    f16' :: Int -> [String] -> [(Int, [String])]
-    f16' _ [] = []
-    f16' ind seq = let (h, t) = splitAt n seq in (ind, h):(f16' (ind + 1) t)
-    log10N :: Int -> Int
-    log10N = log10N' 0 where
-        log10N' ans 0 = ans
-        log10N' ans n = log10N' (ans+1) (n `div` 10)
+shuffle :: RandomGen t => [a] -> t -> ([a], t)
+shuffle seq rand = shuffle' [] seq rand
+    where
+        shuffle' buf [] rand = (buf, rand)
+        shuffle' buf seq rand = shuffle' (c:buf) s' rand'
+            where
+                (r, rand') = random rand
+                (c, s') = extract seq $ mod r $ length seq
 
--- tail -n
-f15 :: Int -> String -> String
-f15 n = unlines . tailN n . lines
+extract :: [a] -> Int -> (a, [a])
+extract seq ind =
+    let c:s = drop ind seq
+        seq' = take ind seq ++ s
+    in (c, seq')
 
-tailN :: Int -> [a] -> [a]
-tailN n = reverse . take n . reverse
+f08 :: String -> String
+f08 str = show (cipher . cipher $ str, cipher str)
 
--- head -n
-f14 :: Int -> String -> String
-f14 n = unlines . take n . lines
+cipher :: String -> String
+cipher = map cipher'
+    where cipher' char
+            | isAsciiLower char = chr . (219-) . ord $ char
+            | otherwise = char
 
--- paste str1 str2
-f13 :: String -> String -> String
-f13 str1 str2 = unlines $ zipWith (\s1 s2 -> s1 ++ '\t':s2) (lines str1) (lines str2)
+f07 :: Int -> String -> Float -> String
+f07 a b c = (show a) ++ "時の" ++ b ++ "は" ++ (show c)
 
--- (cut -f1, cut -f2)
-f12 :: String -> (String, String)
-f12 str = (s1, s2) where (s1:s2:_) = columns str
+f06 :: String -> String -> String
+f06 str1 str2 = show (union, intersection, difference, se_in x, se_in y)
+    where
+        bigramSet = Set.fromList . ngram 2
+        (x, y) = (bigramSet str1, bigramSet str2)
+        union = Set.union x y
+        intersection = Set.intersection x y
+        difference = Set.difference x y
+        se_in = Set.member "se"
 
-columns :: String -> [String]
-columns = map unlines . transpose . map words . lines
+f05 :: String -> String
+f05 str = show (nwords 2 str, ngram 2 str)
 
--- expand -t1
-f11 :: String -> String
-f11 = map expand where
-    expand :: Char -> Char
-    expand '\t' = ' '
-    expand c = c
+nwords :: Int -> String -> [[String]]
+nwords n str = ngram n $ words str
 
--- wc -l
-f10 :: String -> String
-f10 = show . length . lines
+ngram :: Int -> [a] -> [[a]]
+ngram n seq =
+    let len = length seq
+        front = [0..(len-n)]
+    in  map (\i -> take n $ drop i seq) front
 
+f04 :: String -> String
+f04 = show . Map.fromList . map (\(i, s) -> (take (f04' i) s, i)) . zip [1..] . words
+f04' x  | x `elem` [1, 5, 6, 7, 8, 9, 15, 16, 19] = 1
+        | otherwise = 2
 
-q19 = putStr . f19
-q18 = putStr . f18
-q17 = putStr . f17
+f03 :: String -> String
+f03 = show . map (length . filter isAlpha) . words
 
-q16 input = do
-    n <- readLn :: IO Int
-    putStrLn $ foldr (\(ind, str) buf -> unlines [ind, str] ++ buf) "" $ f16 n input
+f02 :: String -> String -> String
+f02 = ((foldr (\(a, b) s -> a:b:s) []) .) . zip
 
-q15 input = do
-    n <- readLn :: IO Int
-    putStr $ f15 n input
+f01 :: String -> String
+f01 = map snd . filter (\(i, c) -> odd i) . zip [1..]
 
-q14 input = do
-    n <- readLn :: IO Int
-    putStr $ f14 n input
+f00 :: String -> String
+f00 = reverse
 
-q13 input = do
-    c1 <- readFile "output/col1.txt"
-    c2 <- readFile "output/col2.txt"
-    writeFile "output/col.txt" $ f13 c1 c2
-
-q12 input = do
-    let (s1, s2) = f12 input
-    mkdir_p "output"
-    writeFile "output/col1.txt" s1
-    writeFile "output/col2.txt" s2
-
-ignoreAlreadyExist :: IOError -> IO()
-ignoreAlreadyExist error
-    | ioeGetErrorType error == alreadyExistsErrorType = return ()
-    | otherwise = throwIO error
-
-mkdir_p :: FilePath -> IO ()
-mkdir_p = handle ignoreAlreadyExist . createDirectory
-
-q11 = putStrLn . f11
-q10 = putStrLn . f10
-
+q09 = f09 "I couldn't believe that I could actually understand what I was reading : the phenomenal power of the human mind ."
+q08 = f08 "The QUICK brown fox jumps over the *lazy* dog."
+q07 = f07 12 "気温" 22.4
+q06 = f06 "paraparaparadise" "paragraph"
+q05 = f05 "I am an NLPer"
+q04 = f04 "Hi He Lied Because Boron Could Not Oxidize Fluorine. New Nations Might Also Sign Peace Security Clause. Arthur King Can."
+q03 = f03 "Now I need a drink, alcoholic of course, after the heavy lectures involving quantum mechanics."
+q02 = f02 "パトカー" "タクシー"
+q01 = f01 "パタトクカシーー"
+q00 = f00 "stressed"
