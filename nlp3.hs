@@ -7,12 +7,28 @@ import Codec.Compression.GZip (decompress)
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
 import Control.Applicative
 import Control.Monad
-import qualified Data.List as L
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import Data.List (find)
+import Text.Regex.Posix
+import Data.Maybe (mapMaybe)
+main = q20 >>= q21
+
+f21 :: String -> [String]
+f21 =  join . map (getAllTextMatches . (=~ "(.*Category.*)")) . lines
+
+-- linerRegex :: String -> Regex
+-- linerRegex pattern = mkRegexWithOpts pattern True False
+
+f20 :: LBS.ByteString -> String
+f20 = findTextOf "イギリス" . mapMaybe decode . UTF8.lines
+
+q21 :: String -> IO ()
+q21 = putStr . unlines . f21
+
+q20 :: IO String
+q20 = getGZipContents "input/jawiki-country.json.gz" >>= return . f20
 
 data Article = Article
-    { text :: T.Text
+    { text :: String
     , title :: String
     } deriving (Show, Generic)
 
@@ -21,21 +37,5 @@ instance FromJSON Article
 getGZipContents :: String -> IO LBS.ByteString
 getGZipContents = fmap decompress . LBS.readFile
 
-
-
-main = do
-    gz <- getGZipContents "input/jawiki-country.json.gz"
-    let
-        ukText = findTextOf "イギリス" . L.map decode . UTF8.lines $ gz
-        -- head10 = fmap (T.unlines . L.take 10 . T.lines) ukText
-    case ukText of
-        Just s -> T.writeFile "UK.txt" s
-        Nothing -> return ()
-
-
-findTextOf :: String -> [Maybe Article] -> Maybe T.Text
-findTextOf title' = fmap text . join . L.find (titleIs title') where
-    titleIs :: String -> Maybe Article -> Bool
-    titleIs title' (Just t) | title t == title' = True
-    titleIs _ _ = False
-
+findTextOf :: String -> [Article] -> String
+findTextOf title' = maybe "" text . find ((title' ==) . title)
