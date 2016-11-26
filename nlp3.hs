@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, FlexibleContexts #-}
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.Char8 as BS
@@ -14,19 +14,47 @@ import Control.Applicative
 import Control.Monad
 import Text.Regex.Posix
 
-main = getUKText >>= q22
+main = getUKText >>= q24
 getUKText = liftA f20 (getGZipContents "input/jawiki-country.json.gz")
 
--- 戻り読みと先読みを使うと下のパターンになるけど、サポートされてなさそう
--- "(?<=Category:).+(?=\\]\\])"
+f25 :: BS.ByteString -> [BS.ByteString]
+f25 = mapMaybe (@@1) . matchOf "\\|(.+?)\\|" . basicInfo
+
+basicInfo :: BS.ByteString -> BS.ByteString
+basicInfo = BS.concat . reverse . basicInfo' [] True . BS.lines where
+    basicInfo' :: [BS.ByteString] -> Bool -> [BS.ByteString] -> [BS.ByteString]
+    basicInfo' buf skipping (s:strs)
+        | matchOf "\\{\\{基礎情報" s = basicInfo' buf False strs
+        | skipping = basicInfo' buf True strs
+        | matchOf "^\\}\\}$" s = (utf8pack "|"):buf
+        | otherwise = basicInfo' (s:buf) False strs
+
+f24 :: BS.ByteString -> [BS.ByteString]
+f24 = mapMaybe (@@ 1) . matchOf "([^ :=][^:=]+\\.(png|PNG|jpg|JPG|jpeg|svg))"
+
+f23 :: BS.ByteString -> [(BS.ByteString, Int)]
+f23 = map (\(_:equals:title:_) -> (title, BS.length equals)) . matchOf "^\\=(=+)([^=]+)="
+
+-- 戻り読みを使うと下のパターンになるけど、サポートされてなさそう
+-- "(?<=Category:)[^]]+"
 f22 :: BS.ByteString -> [BS.ByteString]
-f22 =  mapMaybe ((`at` 1) . head . (=~ (utf8pack "\\[\\[Category:(.+)\\]\\]"))) . f21
+f22 = mapMaybe ((@@ 1) . head . matchOf "Category:([^]]+)") . f21
 
 f21 :: BS.ByteString -> [BS.ByteString]
-f21 =  filter (=~ (utf8pack "\\[\\[Category:.*\\]\\]")) . BS.lines
+f21 = filter (matchOf "\\[\\[Category:.*\\]\\]") . BS.lines
+
+matchOf :: (RegexContext Text.Regex.Posix.Regex source target) =>
+    String -> (source -> target)
+matchOf pattern = (=~ (utf8pack pattern))
 
 f20 :: LBS.ByteString -> BS.ByteString
 f20 = utf8pack . findTextOf "イギリス" . mapMaybe decode . LBS.lines
+
+q24 :: BS.ByteString -> IO ()
+q24 = putStr . utf8unpack . BS.unlines . f24
+
+q23 :: BS.ByteString -> IO ()
+q23 = putStr . unlines . map (\(s, i) -> (utf8unpack s ++ "\t" ++ show i)) . f23
 
 q22 :: BS.ByteString -> IO ()
 q22 = putStr . utf8unpack . BS.unlines . f22
@@ -37,10 +65,12 @@ q21 = putStr . utf8unpack . BS.unlines . f21
 q20 :: BS.ByteString -> IO ()
 q20 = putStrLn . utf8unpack
 
-at :: [a] -> Int -> Maybe a
-at list i
+-- Safe (!!) operation
+(@@) :: [a] -> Int -> Maybe a
+(@@) list i
     | (i <) $ length list = Just $ list !! i
     | otherwise = Nothing
+infix 9 @@
 
 data Article = Article
     { text :: String
