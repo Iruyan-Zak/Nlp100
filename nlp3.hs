@@ -1,31 +1,46 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-import GHC.Generics
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.ByteString.Char8 as BS
+
 import Data.Aeson (FromJSON, decode)
-import qualified Data.ByteString.Lazy as LBS
 import Codec.Compression.GZip (decompress)
-import qualified Data.ByteString.Lazy.UTF8 as UTF8
+import Codec.Binary.UTF8.String (encodeString, decodeString)
+import Data.List (find)
+import Data.Maybe (mapMaybe)
+
+import GHC.Generics
 import Control.Applicative
 import Control.Monad
-import Data.List (find)
 import Text.Regex.Posix
-import Data.Maybe (mapMaybe)
-main = q20 >>= q21
 
-f21 :: String -> [String]
-f21 =  join . map (getAllTextMatches . (=~ "(.*Category.*)")) . lines
+main = getUKText >>= q22
+getUKText = liftA f20 (getGZipContents "input/jawiki-country.json.gz")
 
--- linerRegex :: String -> Regex
--- linerRegex pattern = mkRegexWithOpts pattern True False
+-- 戻り読みと先読みを使うと下のパターンになるけど、サポートされてなさそう
+-- "(?<=Category:).+(?=\\]\\])"
+f22 :: BS.ByteString -> [BS.ByteString]
+f22 =  mapMaybe ((`at` 1) . head . (=~ (utf8pack "\\[\\[Category:(.+)\\]\\]"))) . f21
 
-f20 :: LBS.ByteString -> String
-f20 = findTextOf "イギリス" . mapMaybe decode . UTF8.lines
+f21 :: BS.ByteString -> [BS.ByteString]
+f21 =  filter (=~ (utf8pack "\\[\\[Category:.*\\]\\]")) . BS.lines
 
-q21 :: String -> IO ()
-q21 = putStr . unlines . f21
+f20 :: LBS.ByteString -> BS.ByteString
+f20 = utf8pack . findTextOf "イギリス" . mapMaybe decode . LBS.lines
 
-q20 :: IO String
-q20 = getGZipContents "input/jawiki-country.json.gz" >>= return . f20
+q22 :: BS.ByteString -> IO ()
+q22 = putStr . utf8unpack . BS.unlines . f22
+
+q21 :: BS.ByteString -> IO ()
+q21 = putStr . utf8unpack . BS.unlines . f21
+
+q20 :: BS.ByteString -> IO ()
+q20 = putStrLn . utf8unpack
+
+at :: [a] -> Int -> Maybe a
+at list i
+    | (i <) $ length list = Just $ list !! i
+    | otherwise = Nothing
 
 data Article = Article
     { text :: String
@@ -39,3 +54,10 @@ getGZipContents = fmap decompress . LBS.readFile
 
 findTextOf :: String -> [Article] -> String
 findTextOf title' = maybe "" text . find ((title' ==) . title)
+
+utf8unpack :: BS.ByteString -> String
+utf8unpack =  decodeString . BS.unpack
+
+utf8pack :: String -> BS.ByteString
+utf8pack = BS.pack . encodeString
+
