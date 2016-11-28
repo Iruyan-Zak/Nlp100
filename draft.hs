@@ -1,3 +1,8 @@
+-- It's `maybe`
+doOrDefault :: (a -> b) -> b -> Maybe a -> b
+doOrDefault f _ (Just a) = f a
+doOrDefault _ nil Nothing = nil
+
 f15 n str = let
     l = lines str
     d = (length l) - n
