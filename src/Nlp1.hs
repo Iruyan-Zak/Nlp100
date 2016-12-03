@@ -1,9 +1,12 @@
+module Nlp1 (answers) where
+
 import Data.Char
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import System.Random
 
-main = q09 >>= putStrLn
+answers :: [IO ()]
+answers = map putStrLn [q00, q01, q02, q03, q04, q05, q06, q07, q08] ++ [q09]
 
 f09 :: String -> IO String
 f09 str = do
@@ -88,7 +91,7 @@ f01 = map snd . filter (\(i, c) -> odd i) . zip [1..]
 f00 :: String -> String
 f00 = reverse
 
-q09 = f09 "I couldn't believe that I could actually understand what I was reading : the phenomenal power of the human mind ."
+q09 = putStrLn =<< f09 "I couldn't believe that I could actually understand what I was reading : the phenomenal power of the human mind ."
 q08 = f08 "The QUICK brown fox jumps over the *lazy* dog."
 q07 = f07 12 "気温" 22.4
 q06 = f06 "paraparaparadise" "paragraph"

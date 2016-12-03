@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric, FlexibleContexts #-}
+module Nlp3 (answers) where
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.Char8 as BS
@@ -16,7 +17,7 @@ import Control.Applicative
 import Control.Monad
 import Text.Regex.Posix
 
-main = q29 =<< getUKText
+answers = map (getUKText >>=) [q20, q21, q22, q23, q24, q25, q26, q27, q28, q29]
 
 getUKText :: IO BS.ByteString
 getUKText = return . f20 =<< getGZipContents "input/jawiki-country.json.gz"

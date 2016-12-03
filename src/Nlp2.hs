@@ -1,11 +1,11 @@
+module Nlp2 (answers) where
+
 import Data.List
 import System.Directory
 import System.IO.Error
 import Control.Exception
 
-main = do
-    contents <- readFile "input/hightemp.txt"
-    q19 contents
+answers = map (readFile "input/hightemp.txt" >>=) [q10, q11, q12, q13, q14, q15, q16, q17, q18, q19]
 
 -- cut -f1 | LC_ALL=C sort | uniq -c
 f19 :: String -> String
