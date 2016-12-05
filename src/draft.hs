@@ -1,3 +1,7 @@
+split :: (Eq a) => a -> [a] -> [[a]]
+split c s = (first :) $ split c $ tail s
+    where (first, second) = span (== c) s
+
 -- It's `maybe`
 doOrDefault :: (a -> b) -> b -> Maybe a -> b
 doOrDefault f _ (Just a) = f a

@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-7.11
+resolver: lts-2.22
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,11 +41,19 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
-- aeson-1.0.2.1
+- aeson-0.7.0.6
+- blaze-builder-0.3.3.4
+- attoparsec-0.11.3.4
+- bytestring-0.10.2.0
 - zlib-0.6.1.2
 - utf8-string-1.0.1.1
-- http-conduit-2.1.11
+- http-conduit-2.1.7.2
 - regex-0.95.2
+- mecab-0.4.0
+- text-0.11.3.1
+- gnuplot-0.5.3.1
+- data-accessor-transformers-0.2.1.7
+- utility-ht-0.0.12
 
 # Override default flag values for local packages and extra-deps
 flags: {}

@@ -15,9 +15,9 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Nlp1, Nlp2, Nlp3
+  exposed-modules:     Nlp1, Nlp2, Nlp3, Nlp4, Zak.Utf8
   build-depends:
-    base >= 4.7 && < 5,
+    base,
     containers,
     random,
     directory,
@@ -26,15 +26,17 @@ library
     zlib,
     utf8-string,
     http-conduit,
-    regex-posix
+    regex-posix,
+    mecab,
+    gnuplot
+
   default-language:    Haskell2010
 
 executable Nlp100-exe
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base
-                     , Nlp100
+  build-depends:       base, Nlp100
   default-language:    Haskell2010
 
 -- test-suite Nlp100-test
