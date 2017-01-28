@@ -1,5 +1,5 @@
 name:                Nlp100
-version:             0.3.0.0
+version:             0.4.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
 homepage:            https://github.com/iruyan-zak/Nlp100#readme
@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Nlp1, Nlp2, Nlp3, Nlp4, Zak.Utf8
+  exposed-modules:     Nlp1, Nlp2, Nlp3, Nlp4, Zak.Utf8, Zak.Morph
   build-depends:
     base,
     containers,
