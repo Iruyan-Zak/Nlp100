@@ -131,8 +131,7 @@ basicInfo = BS.concat . reverse . basicInfo' [] True . BS.lines where
         | matchOf "^\\}\\}$" s = (u"|"):buf
         | otherwise = basicInfo' (s:buf) False strs
 
-matchOf :: (RegexContext Text.Regex.Posix.Regex source target) =>
-    String -> (source -> target)
+matchOf :: (RegexContext Regex source target) => String -> (source -> target)
 matchOf pattern = (=~ (utf8pack pattern))
 
 putBS :: BS.ByteString -> IO ()

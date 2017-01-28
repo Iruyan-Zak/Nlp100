@@ -1,18 +1,21 @@
 module Nlp4 (answers) where
 
 import System.Directory
-import Text.MeCab
 import Zak.Utf8
 import qualified Data.ByteString.Char8 as BS
+import Data.ByteString.Char8 (ByteString)
 import Data.Maybe (mapMaybe)
 import Control.Monad
-import Data.List (group, sort)
+import Data.List (group, sort, sortBy)
+import Data.List.HT (chop)
+import Data.Tuple.HT
+import Control.Arrow
 import Graphics.Gnuplot.Simple
 
 answers = map (morphemeBook >>=) [q30, q31, q32, q33, q34, q35, q36, q37, q38, q39]
 
 morphemeBook :: IO [[Morpheme]]
-morphemeBook = return . createMorphemeBook =<< mecabString
+morphemeBook = buildMorphemeBook <$> BS.readFile "input/neko.txt.mecab"
 
 f39 :: [[Morpheme]] -> [Int]
 f39 = map fst . frequency
@@ -65,13 +68,13 @@ f36 :: [[Morpheme]] -> [(Int, BS.ByteString)]
 f36 = take 10 . frequency
 
 frequency :: [[Morpheme]] -> [(Int, BS.ByteString)]
-frequency = reverse . sort . runlengthF . sort . map base . join
+frequency = sortBy (flip compare) . runlengthF . sort . map base . join
 
 runlength :: (Eq a) => [a] -> [(a, Int)]
-runlength = map (\s -> (head s, length s)) . group
+runlength = map (head &&& length) . group
 
 runlengthF :: (Eq a) => [a] -> [(Int, a)]
-runlengthF = map (\s -> (length s, head s)) . group
+runlengthF = map (length &&& head) . group
 
 f35 :: [[Morpheme]] -> [BS.ByteString]
 f35 = join . map (nouns []) where
@@ -79,14 +82,14 @@ f35 = join . map (nouns []) where
     nouns buf [] = [BS.concat buf]
     nouns buf (m:ms) | isNoun m = nouns (surface m:buf) ms
     nouns [] (_:ms) = nouns [] ms
-    nouns buf (_:ms) = (BS.concat buf) : (nouns [] ms)
+    nouns buf (_:ms) = BS.concat buf : nouns [] ms
 
 f34 :: [[Morpheme]] -> [BS.ByteString]
 f34 = join . map aofb where
     aofb :: [Morpheme] -> [BS.ByteString]
     aofb (a:o:b:ms)
-        | (isNoun a) && (surface o == u"の") && (isNoun b)
-            = BS.concat [surface a, surface o, surface b] : (aofb $ b:ms)
+        | isNoun a && (surface o == u"の") && isNoun b
+            = (:) (BS.concat $ map surface [a, o, b]) (aofb $ b:ms)
         | otherwise = aofb $ o:b:ms
     aofb _ = []
 
@@ -110,34 +113,13 @@ q32 = BS.putStr . BS.unlines . f32
 q31 = BS.putStr . BS.unlines . f31
 q30 = putStr . show
 
-mecabString :: IO BS.ByteString
-mecabString = do
-    exist <- doesFileExist outfile
-    if exist then BS.readFile outfile
-        else do
-            contents <- readFile infile
-            mecab <- new2 " -E\\ -F %m\\t%f[6]\\t%f[0]\\t%f[1]\\n"
-            parsedStr <- parse mecab $ utf8pack contents
-            BS.writeFile outfile parsedStr
-            return parsedStr
-    where
-        infile = "input/neko.txt"
-        outfile = "output/neko.txt.mecab"
+buildMorphemeBook :: BS.ByteString -> [[Morpheme]]
+buildMorphemeBook =
+    map (mapMaybe (toMorpheme . mapSnd (BS.split ',' . BS.tail) . BS.breakSubstring (u "\t"))) . chop (u "EOS" ==) . BS.lines
 
-createMorphemeBook :: BS.ByteString -> [[Morpheme]]
-createMorphemeBook =
-    intoBook . mapMaybe (listToMorpheme . BS.split '\t') . BS.lines
-    where
-        intoBook :: [Morpheme] -> [[Morpheme]]
-        intoBook [] = []
-        intoBook morphs = (first :) $ intoBook second
-            where (first, second) = devideAfter (\(Morpheme s _ _ _) -> s == u"。") morphs
-
-devideAfter :: (a -> Bool) -> [a] -> ([a], [a])
-devideAfter _ [] = ([], [])
-devideAfter pred (x:xs)
-    | pred x = ([x], xs)
-    | otherwise = (x:first, second) where (first, second) = devideAfter pred xs
+toMorpheme :: (ByteString, [ByteString]) -> Maybe Morpheme
+toMorpheme (s, [p, p1, _, _, _, _, b, _, _]) = Just $ Morpheme s b p p1
+toMorpheme _ = Nothing
 
 data Morpheme = Morpheme
     { surface   :: ByteString
@@ -148,8 +130,4 @@ data Morpheme = Morpheme
 
 instance Show Morpheme where
     show (Morpheme s b p p1) = utf8unpack $ BS.concat [s, u": ", b, u"/", p, u"/", p1]
-
-listToMorpheme :: [ByteString] -> Maybe Morpheme
-listToMorpheme (s:b:p:p1:[]) = Just $ Morpheme s b p p1
-listToMorpheme _ = Nothing
 
