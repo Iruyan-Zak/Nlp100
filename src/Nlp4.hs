@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Nlp4 (answers) where
 
 import System.Directory
@@ -77,12 +79,7 @@ runlengthF :: (Eq a) => [a] -> [(Int, a)]
 runlengthF = map (length &&& head) . group
 
 f35 :: [[Morpheme]] -> [BS.ByteString]
-f35 = join . map (nouns []) where
-    nouns [] [] = []
-    nouns buf [] = [BS.concat buf]
-    nouns buf (m:ms) | isNoun m = nouns (surface m:buf) ms
-    nouns [] (_:ms) = nouns [] ms
-    nouns buf (_:ms) = BS.concat buf : nouns [] ms
+f35 = join . map (map (BS.concat . map surface) . filter ((2 <=) . length) . chop (not . isNoun))
 
 f34 :: [[Morpheme]] -> [BS.ByteString]
 f34 = join . map aofb where
@@ -111,7 +108,7 @@ q34 = BS.putStr . BS.unlines . f34
 q33 = BS.putStr . BS.unlines . f33
 q32 = BS.putStr . BS.unlines . f32
 q31 = BS.putStr . BS.unlines . f31
-q30 = putStr . show
+q30 = print . join
 
 buildMorphemeBook :: BS.ByteString -> [[Morpheme]]
 buildMorphemeBook =
@@ -129,5 +126,16 @@ data Morpheme = Morpheme
     } deriving(Eq, Ord)
 
 instance Show Morpheme where
-    show (Morpheme s b p p1) = utf8unpack $ BS.concat [s, u": ", b, u"/", p, u"/", p1]
+    show (Morpheme s b p p1) = let
+        s' = utf8unpack . escapeEmSpace $ s
+        b' = utf8unpack . escapeEmSpace $ b
+        p' = utf8unpack p
+        p1' = utf8unpack p1
+        in concat ["{'base': '", b', "', 'pos': '", p', "', 'pos1': '", p1', "', 'surface': '", s', "'}"] where
+            escapeEmSpace s
+                | s == u"　" = u"\\u3000"
+                | otherwise = s
+
+instance {-# OVERLAPPING #-} Show [Morpheme] where
+    show ms = ("[" ++) . drop 3 $ foldr (\a b -> ",\n " ++ show a ++ b) "]" ms
 
